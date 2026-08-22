@@ -28,7 +28,6 @@ const db = new sqlite3.Database('./database.sqlite', (err) => {
 
 // Inicialização das tabelas
 db.serialize(() => {
-    // Tabela de Usuários
     db.run(`CREATE TABLE IF NOT EXISTS usuarios (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE,
@@ -36,7 +35,6 @@ db.serialize(() => {
         isAdmin INTEGER DEFAULT 0
     )`);
 
-    // Tabela de Produtos
     db.run(`CREATE TABLE IF NOT EXISTS produtos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nome TEXT,
@@ -47,7 +45,6 @@ db.serialize(() => {
         especificacoes TEXT
     )`);
 
-    // Tabela de Compras
     db.run(`CREATE TABLE IF NOT EXISTS compras (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         payment_id TEXT UNIQUE,
@@ -58,20 +55,17 @@ db.serialize(() => {
         data_compra DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
-    // Tabela de Carrinhos
     db.run(`CREATE TABLE IF NOT EXISTS carrinhos (
         usuario TEXT PRIMARY KEY,
         itens TEXT
     )`);
 
-    // LIMPEZA GERAL DE PENDENTES ANTIGAS
+    // FORÇA A LIMPEZA DE QUALQUER COMPRA PENDENTE OU GRAVADA INCORRETAMENTE
     db.run(`DELETE FROM compras WHERE status IS NULL OR LOWER(status) != 'approved'`);
 
-    // Cria o usuário Admin padrão se não existir
     const hashSenhaAdmin = bcrypt.hashSync("123456", 10);
     db.run(`INSERT OR IGNORE INTO usuarios (username, passwordHash, isAdmin) VALUES (?, ?, 1)`, ["Admin", hashSenhaAdmin]);
 
-    // Insere produto padrão se a tabela estiver vazia
     db.get(`SELECT COUNT(*) as qtd FROM produtos`, (err, row) => {
         if (!err && row.qtd === 0) {
             db.run(`INSERT INTO produtos (nome, preco, cor, imagem, destaque, especificacoes) VALUES (?, ?, ?, ?, ?, ?)`, [
@@ -95,6 +89,14 @@ app.use(session({
     resave: false,
     saveUninitialized: true
 }));
+
+// ROTA PARA ZERAR O BANCO DE COMPRAS SE PRECISAR
+app.get('/limpar-compras', (req, res) => {
+    db.run(`DELETE FROM compras`, (err) => {
+        if (err) return res.send("Erro: " + err.message);
+        res.send("<h1>Histórico de compras limpo com sucesso!</h1><a href='/loja'>Voltar para a Loja</a>");
+    });
+});
 
 // --- ROTAS DE AUTENTICAÇÃO E NAVEGAÇÃO ---
 
@@ -204,13 +206,13 @@ app.post('/admin/deletar-produto/:id', (req, res) => {
     });
 });
 
-// --- ROTA DE MINHAS COMPRAS (APENAS PAGAS E APROVADAS) ---
+// --- ROTA DE MINHAS COMPRAS (RETORNA APENAS COMPRAS APROVADAS) ---
 app.get('/api/minhas-compras', (req, res) => {
     if (!req.session.user) {
         return res.status(401).json({ success: false, error: "Não autorizado" });
     }
 
-    db.all(`SELECT payment_id, itens, valor, status, data_compra FROM compras WHERE LOWER(usuario) = LOWER(?) AND LOWER(status) = 'approved' ORDER BY id DESC`, 
+    db.all(`SELECT id, payment_id, itens, valor, status, data_compra FROM compras WHERE LOWER(usuario) = LOWER(?) AND LOWER(status) = 'approved' ORDER BY id DESC`, 
     [req.session.user], (err, rows) => {
         if (err) {
             return res.status(500).json({ success: false, error: "Erro ao buscar histórico." });
@@ -237,7 +239,10 @@ app.get('/api/minhas-compras', (req, res) => {
             }
 
             return {
-                ...r,
+                id: r.id,
+                payment_id: r.payment_id,
+                valor: r.valor,
+                status: r.status,
                 data_criacao: dataFormatada,
                 itens: parsedItens
             };
@@ -247,7 +252,7 @@ app.get('/api/minhas-compras', (req, res) => {
     });
 });
 
-// --- CHECKOUT PIX (NÃO GRAVA NADA COMO PENDENTE NO BANCO) ---
+// --- CHECKOUT PIX (NÃO SALVA ABSOLUTAMENTE NADA NO BANCO AQUI) ---
 app.post('/api/checkout/pix', async (req, res) => {
     try {
         const { itens, usuario } = req.body;
@@ -295,7 +300,7 @@ app.post('/api/checkout/pix', async (req, res) => {
     }
 });
 
-// --- CONSULTA STATUS DE PAGAMENTO (SÓ SALVA SE FOR APROVADO) ---
+// --- VERIFICAÇÃO DE STATUS (SÓ GRAVA SE O STATUS DO MERCADO PAGO FOR REALMENTE 'approved') ---
 app.post('/api/checkout/status/:id', async (req, res) => {
     try {
         const paymentId = req.params.id;
@@ -306,15 +311,15 @@ app.post('/api/checkout/status/:id', async (req, res) => {
         if (paymentData && paymentData.status) {
             const status = paymentData.status;
 
+            // REGRA PRINCIPAL: SÓ SALVA SE FOR APROVADO DE FATO NO MERCADO PAGO
             if (status === 'approved') {
-                // Insere no banco SOMENTE se ainda não foi inserido e já foi APROVADO
                 db.get(`SELECT id FROM compras WHERE payment_id = ?`, [paymentId], (err, row) => {
                     if (!row) {
                         const itensSimplificados = (itens || []).map(i => ({ 
-                            nome: i.produto ? i.produto.nome : i.nome, 
-                            quantidade: i.quantidade, 
-                            preco: i.produto ? i.produto.preco : i.preco,
-                            imagem: i.produto ? i.produto.imagem : i.imagem 
+                            nome: i.produto ? i.produto.nome : (i.nome || 'Produto'), 
+                            quantidade: i.quantidade || 1, 
+                            preco: i.produto ? i.produto.preco : (i.preco || '0,00'),
+                            imagem: i.produto ? i.produto.imagem : (i.imagem || '') 
                         }));
 
                         const agoraISO = new Date().toISOString();
@@ -329,13 +334,12 @@ app.post('/api/checkout/status/:id', async (req, res) => {
             return res.json({ success: true, status: status });
         }
 
-        return res.json({ success: false, status: 'unknown' });
+        return res.json({ success: false, status: 'pending' });
     } catch (error) {
         return res.json({ success: false, status: 'error' });
     }
 });
 
-// Suporte para requisições GET no status
 app.get('/api/checkout/status/:id', async (req, res) => {
     try {
         const paymentId = req.params.id;
@@ -343,7 +347,7 @@ app.get('/api/checkout/status/:id', async (req, res) => {
         if (paymentData && paymentData.status) {
             return res.json({ success: true, status: paymentData.status });
         }
-        return res.json({ success: false, status: 'unknown' });
+        return res.json({ success: false, status: 'pending' });
     } catch (error) {
         return res.json({ success: false, status: 'error' });
     }

@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vitrine - Loja Minecraft</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background-color: #0d0d11; color: #fff; min-height: 100vh; overflow-x: hidden; }
+
+        header {
+            background: #14141d;
+            border-bottom: 1px solid #2a2a3c;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .logo { font-size: 20px; font-weight: 700; color: #8c52ff; letter-spacing: 1px; }
+        .user-info { display: flex; align-items: center; gap: 12px; }
+        .user-name { font-size: 14px; color: #b3b3c6; }
+        .user-name strong { color: #fff; }
+        
+        .btn-action {
+            padding: 8px 16px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.3s;
+            cursor: pointer;
+            border: none;
+        }
+        .btn-admin { background: #8c52ff; color: #fff; }
+        .btn-admin:hover { background: #6121ed; }
+        .btn-compras { background: #2a2a3c; color: #fff; border: 1px solid #3a3a52; }
+        .btn-compras:hover { background: #3a3a52; border-color: #8c52ff; }
+        .btn-logout { background: #2a2a3c; color: #ff5555; }
+        .btn-logout:hover { background: #3a3a52; }
+
+        .btn-carrinho {
+            background: linear-gradient(135deg, #8c52ff 0%, #6121ed 100%);
+            border: none;
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .carrinho-badge {
+            background: #ff4d6d;
+            color: #fff;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 50%;
+            font-weight: 700;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 60px 20px 40px 20px;
+            background: radial-gradient(circle at center, rgba(140, 82, 255, 0.15) 0%, rgba(13, 13, 17, 1) 70%);
+        }
+        .hero h1 { font-size: 36px; margin-bottom: 10px; font-weight: 700; }
+        .hero p { color: #8a8a9e; font-size: 16px; }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+        .produtos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
+        }
+
+        .card-produto {
+            background: #14141d;
+            border: 1px solid #2a2a3c;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        .card-produto:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        .badge-destaque {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .img-container {
+            width: 100%;
+            height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.2);
+            padding: 20px;
+        }
+        .img-container img { max-height: 100%; max-width: 100%; object-fit: contain; }
+
+        .card-body { padding: 20px; flex-grow: 1; display: flex; flex-direction: column; }
+        .card-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+        .card-price { font-size: 22px; font-weight: 700; color: #2ea043; margin-bottom: 15px; }
+
+        .specs-list { list-style: none; margin-bottom: 20px; flex-grow: 1; }
+        .specs-list li {
+            font-size: 13px;
+            color: #b3b3c6;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .specs-list li::before { content: "✔"; color: #2ea043; font-size: 11px; }
+
+        .btn-comprar {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-excluir {
+            width: 100%;
+            margin-top: 8px;
+            padding: 8px;
+            background: #ff4d4d;
+            border: none;
+            border-radius: 6px;
+            color: #fff;
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        /* --- ABA LATERAL DO CARRINHO --- */
+        .cart-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 998;
+            display: none;
+        }
+        .cart-drawer {
+            position: fixed;
+            top: 0; right: -420px;
+            width: 100%; max-width: 400px;
+            height: 100vh;
+            background: #14141d;
+            border-left: 1px solid #2a2a3c;
+            z-index: 999;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            transition: right 0.3s ease;
+        }
+        .cart-drawer.open { right: 0; }
+        .cart-overlay.open { display: block; }
+
+        .cart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #2a2a3c;
+        }
+        .cart-header h2 { font-size: 18px; color: #8c52ff; }
+        .close-cart { background: none; border: none; color: #8a8a9e; font-size: 20px; cursor: pointer; }
+
+        .cart-items { flex-grow: 1; overflow-y: auto; margin: 20px 0; }
+        
+        .cart-item {
+            background: #0b0b10;
+            border: 1px solid #2a2a3c;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        .cart-item-img {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 6px;
+            border: 1px solid #2a2a3c;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            flex-shrink: 0;
+        }
+        .cart-item-img img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .cart-item-content { flex-grow: 1; }
+        .cart-item-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+        .cart-item-info h4 { font-size: 14px; line-height: 1.2; }
+        .cart-item-info span { font-size: 13px; color: #2ea043; font-weight: 700; }
+        .btn-remove-item { background: none; border: none; color: #ff4d6d; cursor: pointer; font-size: 16px; padding: 2px; }
+
+        .qty-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #14141d;
+            padding: 3px 6px;
+            border-radius: 6px;
+            width: fit-content;
+            border: 1px solid #2a2a3c;
+        }
+        .btn-qty {
+            background: #2a2a3c;
+            border: none;
+            color: #fff;
+            width: 22px;
+            height: 22px;
+            border-radius: 4px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn-qty:hover { background: #8c52ff; }
+        .qty-value { font-size: 13px; font-weight: 600; min-width: 18px; text-align: center; }
+
+        .payment-method {
+            background: #0b0b10;
+            border: 1px solid #2ea043;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .pix-icon {
+            width: 32px;
+            height: 32px;
+            background: #32bcad;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 10px;
+            color: #000;
+            letter-spacing: -0.5px;
+        }
+        .payment-info h5 { font-size: 13px; color: #fff; }
+        .payment-info p { font-size: 11px; color: #8a8a9e; }
+
+        .cart-footer { border-top: 1px solid #2a2a3c; padding-top: 15px; }
+        .cart-total { display: flex; justify-content: space-between; font-size: 18px; font-weight: 700; margin-bottom: 15px; }
+        .btn-checkout {
+            width: 100%;
+            padding: 14px;
+            background: #32bcad;
+            border: none;
+            border-radius: 6px;
+            color: #000;
+            font-weight: 700;
+            text-transform: uppercase;
+            cursor: pointer;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .btn-checkout:hover { background: #2aa395; }
+
+        /* --- MODAL DO PIX --- */
+        .modal-pix-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-pix-card {
+            background: #14141d;
+            border: 1px solid #2a2a3c;
+            border-radius: 12px;
+            padding: 25px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+        .qr-box {
+            background: #ffffff;
+            padding: 15px;
+            border-radius: 10px;
+            display: inline-block;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .qr-box img {
+            width: 220px;
+            height: 220px;
+            display: block;
+            margin: 0 auto;
+            image-rendering: pixelated;
+        }
+
+        /* --- MODAL DE MINHAS COMPRAS --- */
+        .modal-compras-card {
+            background: #14141d;
+            border: 1px solid #2a2a3c;
+            border-radius: 12px;
+            padding: 25px;
+            max-width: 550px;
+            width: 90%;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+        .compras-lista {
+            overflow-y: auto;
+            margin-top: 15px;
+            padding-right: 5px;
+        }
+        .compra-card-item {
+            background: #0b0b10;
+            border: 1px solid #2a2a3c;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 12px;
+        }
+        .compra-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #1c1c2b;
+        }
+        .badge-status {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 12px;
+            text-transform: uppercase;
+        }
+        .status-approved { background: rgba(46, 160, 67, 0.2); color: #2ea043; border: 1px solid #2ea043; }
+        .status-pending { background: rgba(255, 170, 0, 0.2); color: #ffaa00; border: 1px solid #ffaa00; }
+        .status-cancelled { background: rgba(255, 77, 77, 0.2); color: #ff4d4d; border: 1px solid #ff4d4d; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">MINECRAFT STORE</div>
+        <div class="user-info">
+            <button class="btn-carrinho" onclick="toggleCarrinho()">
+                🛒 Carrinho <span id="cart-count" class="carrinho-badge">0</span>
+            </button>
+            <button class="btn-action btn-compras" onclick="abrirMinhasCompras()">📋 Minhas Compras</button>
+            <span class="user-name">Jogador: <strong id="nick-usuario">...</strong></span>
+            <a href="/admin" id="btn-admin-panel" class="btn-action btn-admin" style="display: none;">Painel Admin</a>
+            <a href="/logout" class="btn-action btn-logout">Sair</a>
+        </div>
+    </header>
+
+    <div class="hero">
+        <h1>BEM-VINDO À NOSSA LOJA</h1>
+        <p>Escolha seus VIPs e Vantagens exclusivas no servidor</p>
+    </div>
+
+    <div class="container">
+        <div id="produtos-container" class="produtos-grid"></div>
+    </div>
+
+    <!-- MÁSCARA E GAVETA DO CARRINHO -->
+    <div id="cart-overlay" class="cart-overlay" onclick="toggleCarrinho()"></div>
+    <div id="cart-drawer" class="cart-drawer">
+        <div class="cart-header">
+            <h2>Meu Carrinho</h2>
+            <button class="close-cart" onclick="toggleCarrinho()">✕</button>
+        </div>
+
+        <div id="cart-items-list" class="cart-items"></div>
+
+        <div class="cart-footer">
+            <div class="payment-method">
+                <div class="pix-icon">❖ PIX</div>
+                <div class="payment-info">
+                    <h5>Pagamento via PIX</h5>
+                    <p>Aprovação instantânea</p>
+                </div>
+            </div>
+
+            <div class="cart-total">
+                <span>Total:</span>
+                <span id="cart-total-price" style="color: #2ea043;">R$ 0,00</span>
+            </div>
+            <button class="btn-checkout" id="btn-pagar" onclick="irParaPagamento()">
+                <span>❖</span> Pagar com PIX
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL DO PIX COM QR CODE EM ALTA RESOLUÇÃO -->
+    <div id="pix-modal" class="modal-pix-overlay">
+        <div class="modal-pix-card" id="modal-pix-card-content">
+            <!-- Conteúdo inicial dinâmico -->
+        </div>
+    </div>
+
+    <!-- MODAL DE MINHAS COMPRAS -->
+    <div id="compras-modal" class="modal-pix-overlay">
+        <div class="modal-compras-card">
+            <button onclick="fecharModalCompras()" style="position: absolute; top: 15px; right: 15px; background: none; border: none; color: #8a8a9e; font-size: 20px; cursor: pointer;">✕</button>
+            <h3 style="color: #8c52ff; margin-bottom: 5px; font-size: 20px;">📦 Histórico de Compras</h3>
+            <p style="font-size: 12px; color: #8a8a9e; margin-bottom: 10px;">Acompanhe o status das suas transações</p>
+            
+            <div id="compras-lista-container" class="compras-lista">
+                <!-- Pedidos inseridos dinamicamente -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let carrinho = [];
+        let listaProdutos = [];
+        let intervaloStatusPix = null;
+
+        function carregarProdutos() {
+            fetch('/api/produtos')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('nick-usuario').innerText = data.user || 'Jogador';
+                    listaProdutos = data.produtos;
+                    
+                    if (data.isAdmin) {
+                        document.getElementById('btn-admin-panel').style.display = 'inline-block';
+                    }
+
+                    const container = document.getElementById('produtos-container');
+                    container.innerHTML = '';
+
+                    if (data.produtos.length === 0) {
+                        container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #8a8a9e;">Nenhum produto disponível no momento.</p>';
+                        return;
+                    }
+
+                    data.produtos.forEach(prod => {
+                        const card = document.createElement('div');
+                        card.classList.add('card-produto');
+                        card.style.borderColor = prod.cor;
+
+                        let specsHtml = '';
+                        if (prod.especificacoes && prod.especificacoes.length > 0) {
+                            specsHtml = prod.especificacoes.map(spec => `<li>${spec}</li>`).join('');
+                        }
+
+                        let botaoExcluir = '';
+                        if (data.isAdmin) {
+                            botaoExcluir = `<button class="btn-excluir" onclick="deletarProduto(${prod.id})">🗑️ Excluir Produto</button>`;
+                        }
+
+                        card.innerHTML = `
+                            <div class="badge-destaque" style="color: ${prod.cor}; border: 1px solid ${prod.cor};">${prod.destaque || 'NOVO'}</div>
+                            <div class="img-container">
+                                <img src="${prod.imagem}" alt="${prod.nome}">
+                            </div>
+                            <div class="card-body">
+                                <div class="card-title">${prod.nome}</div>
+                                <div class="card-price">R$ ${prod.preco}</div>
+                                <ul class="specs-list">${specsHtml}</ul>
+                                <button class="btn-comprar" style="background-color: ${prod.cor};" onclick="adicionarAoCarrinho(${prod.id})">Adicionar ao Carrinho</button>
+                                ${botaoExcluir}
+                            </div>
+                        `;
+                        container.appendChild(card);
+                    });
+                });
+        }
+
+        function toggleCarrinho() {
+            document.getElementById('cart-drawer').classList.toggle('open');
+            document.getElementById('cart-overlay').classList.toggle('open');
+        }
+
+        function adicionarAoCarrinho(id) {
+            const produto = listaProdutos.find(p => p.id === id);
+            if (produto) {
+                const itemExistente = carrinho.find(item => item.produto.id === id);
+                if (itemExistente) {
+                    itemExistente.quantidade++;
+                } else {
+                    carrinho.push({ produto: produto, quantidade: 1 });
+                }
+                atualizarCarrinho();
+                toggleCarrinho();
+            }
+        }
+
+        function alterarQuantidade(index, delta) {
+            carrinho[index].quantidade += delta;
+            if (carrinho[index].quantidade <= 0) {
+                carrinho.splice(index, 1);
+            }
+            atualizarCarrinho();
+        }
+
+        function removerDoCarrinho(index) {
+            carrinho.splice(index, 1);
+            atualizarCarrinho();
+        }
+
+        function atualizarCarrinho() {
+            const listEl = document.getElementById('cart-items-list');
+            
+            const totalItens = carrinho.reduce((sum, item) => sum + item.quantidade, 0);
+            document.getElementById('cart-count').innerText = totalItens;
+
+            listEl.innerHTML = '';
+            let totalGeral = 0;
+
+            if (carrinho.length === 0) {
+                listEl.innerHTML = '<p style="text-align: center; color: #8a8a9e; margin-top: 20px;">Seu carrinho está vazio.</p>';
+            } else {
+                carrinho.forEach((item, index) => {
+                    const precoNum = parseFloat(item.produto.preco.replace(',', '.'));
+                    const subtotal = precoNum * item.quantidade;
+                    totalGeral += subtotal;
+
+                    const subtotalFormatado = subtotal.toFixed(2).replace('.', ',');
+
+                    listEl.innerHTML += `
+                        <div class="cart-item">
+                            <div class="cart-item-img">
+                                <img src="${item.produto.imagem}" alt="${item.produto.nome}">
+                            </div>
+                            <div class="cart-item-content">
+                                <div class="cart-item-top">
+                                    <div class="cart-item-info">
+                                        <h4>${item.produto.nome}</h4>
+                                        <span>R$ ${subtotalFormatado}</span>
+                                    </div>
+                                    <button class="btn-remove-item" onclick="removerDoCarrinho(${index})">🗑️</button>
+                                </div>
+                                <div class="qty-controls">
+                                    <button class="btn-qty" onclick="alterarQuantidade(${index}, -1)">-</button>
+                                    <span class="qty-value">${item.quantidade}</span>
+                                    <button class="btn-qty" onclick="alterarQuantidade(${index}, 1)">+</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            document.getElementById('cart-total-price').innerText = `R$ ${totalGeral.toFixed(2).replace('.', ',')}`;
+        }
+
+        function irParaPagamento() {
+            if (carrinho.length === 0) {
+                alert("Adicione pelo menos um item ao carrinho!");
+                return;
+            }
+
+            const btnCheckout = document.getElementById('btn-pagar');
+            btnCheckout.innerText = "Gerando PIX...";
+            btnCheckout.disabled = true;
+
+            const usuario = document.getElementById('nick-usuario').innerText;
+
+            fetch('/api/checkout/pix', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ itens: carrinho, usuario: usuario })
+            })
+            .then(res => res.json())
+            .then(data => {
+                btnCheckout.innerHTML = "<span>❖</span> Pagar com PIX";
+                btnCheckout.disabled = false;
+
+                if (data.success) {
+                    const pixCode = data.pixCopiaECola;
+                    let finalQrImg = data.qrCodeImg;
+                    
+                    if (finalQrImg && !finalQrImg.startsWith('http') && !finalQrImg.startsWith('data:image')) {
+                        finalQrImg = `data:image/png;base64,${finalQrImg}`;
+                    }
+
+                    if (!finalQrImg || finalQrImg.length < 20) {
+                        finalQrImg = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(pixCode)}`;
+                    }
+
+                    document.getElementById('modal-pix-card-content').innerHTML = `
+                        <button onclick="fecharModalPix()" style="position: absolute; top: 15px; right: 15px; background: none; border: none; color: #8a8a9e; font-size: 20px; cursor: pointer;">✕</button>
+                        
+                        <h3 style="color: #32bcad; margin-bottom: 5px; font-size: 18px;">❖ Pagamento via PIX</h3>
+                        <p style="font-size: 12px; color: #b3b3c6; margin-bottom: 15px;">Aponte a câmera do aplicativo do seu banco:</p>
+
+                        <div class="qr-box">
+                            <img id="pix-qr-img" src="${finalQrImg}" alt="QR Code PIX">
+                        </div>
+
+                        <div style="margin-bottom: 15px;">
+                            <p style="font-size: 12px; color: #8a8a9e;">Total a pagar: <strong id="pix-modal-total" style="color: #2ea043; font-size: 16px;">R$ ${data.valor}</strong></p>
+                        </div>
+
+                        <input type="text" id="pix-copia-cola" value="${pixCode}" readonly style="width: 100%; padding: 10px; background: #0b0b10; border: 1px solid #2a2a3c; color: #8a8a9e; border-radius: 6px; font-size: 11px; margin-bottom: 10px; text-align: center;">
+
+                        <button onclick="copiarChavePix()" style="width: 100%; padding: 12px; background: #8c52ff; border: none; border-radius: 6px; color: #fff; font-weight: 700; cursor: pointer; text-transform: uppercase;">
+                            📋 Copiar Chave PIX (Copia e Cola)
+                        </button>
+                    `;
+                    
+                    document.getElementById('pix-modal').style.display = 'flex';
+                    toggleCarrinho();
+
+                    if (intervaloStatusPix) clearInterval(intervaloStatusPix);
+
+                    const paymentId = data.paymentId;
+                    intervaloStatusPix = setInterval(async () => {
+                        try {
+                            const res = await fetch(`/api/checkout/status/${paymentId}`);
+                            const result = await res.json();
+
+                            if (result.success && result.status === 'approved') {
+                                clearInterval(intervaloStatusPix);
+                                
+                                document.getElementById('modal-pix-card-content').innerHTML = `
+                                    <div style="padding: 20px 10px; text-align: center;">
+                                        <div style="width: 70px; height: 70px; background: #2ea043; color: #fff; font-size: 40px; font-weight: bold; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; box-shadow: 0 0 20px rgba(46, 160, 67, 0.5);">
+                                            ✓
+                                        </div>
+                                        <h2 style="color: #2ea043; margin-bottom: 10px; font-size: 22px;">Pagamento Aprovado!</h2>
+                                        <p style="color: #b3b3c6; font-size: 14px; margin-bottom: 25px;">Obrigado pela compra. Seus itens/VIP já foram liberados em sua conta!</p>
+                                        <button onclick="fecharEConcluir()" style="width: 100%; padding: 12px; background: #8c52ff; border: none; border-radius: 6px; color: #fff; font-weight: 700; cursor: pointer; text-transform: uppercase;">
+                                            Concluir
+                                        </button>
+                                    </div>
+                                `;
+
+                                carrinho = [];
+                                atualizarCarrinho();
+                            }
+                        } catch (err) {
+                            console.error("Erro ao consultar status:", err);
+                        }
+                    }, 3000);
+
+                } else {
+                    alert("Erro ao gerar PIX: " + (data.error || "Verifique as configurações do Mercado Pago."));
+                }
+            })
+            .catch(err => {
+                btnCheckout.innerHTML = "<span>❖</span> Pagar com PIX";
+                btnCheckout.disabled = false;
+                console.error(err);
+                alert("Falha na comunicação com o servidor.");
+            });
+        }
+
+        function fecharEConcluir() {
+            fecharModalPix();
+        }
+
+        function fecharModalPix() {
+            document.getElementById('pix-modal').style.display = 'none';
+            if (intervaloStatusPix) {
+                clearInterval(intervaloStatusPix);
+            }
+        }
+
+        function copiarChavePix() {
+            const copyText = document.getElementById('pix-copia-cola');
+            copyText.select();
+            copyText.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(copyText.value);
+            alert("Chave Copia e Cola do PIX copiada com sucesso!");
+        }
+
+        function deletarProduto(id) {
+            if (confirm("Tem certeza que deseja excluir este produto?")) {
+                fetch(`/admin/deletar-produto/${id}`, { method: 'POST' })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) carregarProdutos();
+                    });
+            }
+        }
+
+        /* --- LÓGICA DE MINHAS COMPRAS CORRIGIDA --- */
+// Cole este bloco dentro da tag <script> do seu loja.html
+async function abrirMinhasCompras() {
+    // 1. Limpa histórico antigo salvo direto no navegador do usuário
+    localStorage.removeItem('minhas_compras');
+
+    // Mude 'container-compras' para o ID da DIV onde as compras aparecem na sua tela
+    const container = document.getElementById('container-compras'); 
+    if (!container) return;
+
+    try {
+        // 2. Busca do servidor APENAS o que foi pago/aprovado
+        const response = await fetch('/api/minhas-compras');
+        const data = await response.json();
+
+        if (!data.success || !data.compras || data.compras.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: #8a8a9e; padding: 20px;">Você ainda não possui compras aprovadas.</p>';
+            return;
+        }
+
+        // 3. Desenha na tela apenas as compras confirmadas
+        container.innerHTML = '';
+        data.compras.forEach(compra => {
+            container.innerHTML += `
+                <div class="card-compra" style="border: 1px solid #333; margin: 10px 0; padding: 10px; border-radius: 8px;">
+                    <p><strong>Status:</strong> <span style="color: #00ff88;">Aprovado</span></p>
+                    <p><strong>Valor:</strong> R$ ${compra.valor}</p>
+                    <p><strong>Data:</strong> ${compra.data_criacao}</p>
+                </div>
+            `;
+        });
+
+    } catch (err) {
+        console.error("Erro ao carregar compras:", err);
+    }
+}
+
+        function fecharModalCompras() {
+            document.getElementById('compras-modal').style.display = 'none';
+        }
+
+        carregarProdutos();
+    </script>
+</body>
+</html>

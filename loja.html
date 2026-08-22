@@ -717,42 +717,64 @@
             }
         }
 
-        /* --- LÓGICA DE MINHAS COMPRAS CORRIGIDA --- */
-// Cole este bloco dentro da tag <script> do seu loja.html
-async function abrirMinhasCompras() {
-    // 1. Limpa histórico antigo salvo direto no navegador do usuário
-    localStorage.removeItem('minhas_compras');
+        /* --- LÓGICA DE MINHAS COMPRAS (COM SUPORTE A IMAGENS) --- */
+        async function abrirMinhasCompras() {
+            localStorage.removeItem('minhas_compras');
 
-    // Mude 'container-compras' para o ID da DIV onde as compras aparecem na sua tela
-    const container = document.getElementById('container-compras'); 
-    if (!container) return;
+            const container = document.getElementById('compras-lista-container'); 
+            const modal = document.getElementById('compras-modal');
+            
+            if (!container || !modal) return;
 
-    try {
-        // 2. Busca do servidor APENAS o que foi pago/aprovado
-        const response = await fetch('/api/minhas-compras');
-        const data = await response.json();
+            modal.style.display = 'flex';
+            container.innerHTML = '<p style="text-align: center; color: #8a8a9e; padding: 20px;">Carregando histórico...</p>';
 
-        if (!data.success || !data.compras || data.compras.length === 0) {
-            container.innerHTML = '<p style="text-align: center; color: #8a8a9e; padding: 20px;">Você ainda não possui compras aprovadas.</p>';
-            return;
+            try {
+                const response = await fetch('/api/minhas-compras');
+                const data = await response.json();
+
+                if (!data.success || !data.compras || data.compras.length === 0) {
+                    container.innerHTML = '<p style="text-align: center; color: #8a8a9e; padding: 20px;">Você ainda não possui compras aprovadas.</p>';
+                    return;
+                }
+
+                container.innerHTML = '';
+                data.compras.forEach(compra => {
+                    let itensHtml = '';
+                    
+                    if (compra.itens && Array.isArray(compra.itens)) {
+                        itensHtml = compra.itens.map(item => `
+                            <li style="font-size: 13px; color: #b3b3c6; display: flex; align-items: center; gap: 10px; margin-top: 6px;">
+                                ${item.imagem ? `<img src="${item.imagem}" style="width: 32px; height: 32px; object-fit: contain; border-radius: 4px; background: #14141d; padding: 2px; border: 1px solid #2a2a3c;">` : ''}
+                                <span><strong>${item.quantidade || 1}x</strong> ${item.nome || item.produto_nome || item}</span>
+                            </li>
+                        `).join('');
+                    } else if (typeof compra.itens === 'string') {
+                        itensHtml = `<li style="font-size: 13px; color: #b3b3c6; margin-top: 6px;">${compra.itens}</li>`;
+                    }
+
+                    const numPedido = compra.id || compra.payment_id || compra.pedido_id || '---';
+
+                    container.innerHTML += `
+                        <div class="compra-card-item">
+                            <div class="compra-header">
+                                <span style="font-weight: 700; color: #fff; font-size: 14px;">Pedido #${numPedido}</span>
+                                <span class="badge-status status-approved">Aprovado</span>
+                            </div>
+                            <div style="margin-bottom: 8px;">
+                                <p style="font-size: 14px; color: #2ea043; font-weight: 700;">R$ ${compra.valor}</p>
+                                <p style="font-size: 11px; color: #8a8a9e;">Data: ${compra.data_criacao || 'Recente'}</p>
+                            </div>
+                            ${itensHtml ? `<ul style="list-style: none; border-top: 1px dashed #2a2a3c; padding-top: 8px;">${itensHtml}</ul>` : ''}
+                        </div>
+                    `;
+                });
+
+            } catch (err) {
+                console.error("Erro ao carregar compras:", err);
+                container.innerHTML = '<p style="text-align: center; color: #ff4d4d; padding: 20px;">Erro ao carregar histórico.</p>';
+            }
         }
-
-        // 3. Desenha na tela apenas as compras confirmadas
-        container.innerHTML = '';
-        data.compras.forEach(compra => {
-            container.innerHTML += `
-                <div class="card-compra" style="border: 1px solid #333; margin: 10px 0; padding: 10px; border-radius: 8px;">
-                    <p><strong>Status:</strong> <span style="color: #00ff88;">Aprovado</span></p>
-                    <p><strong>Valor:</strong> R$ ${compra.valor}</p>
-                    <p><strong>Data:</strong> ${compra.data_criacao}</p>
-                </div>
-            `;
-        });
-
-    } catch (err) {
-        console.error("Erro ao carregar compras:", err);
-    }
-}
 
         function fecharModalCompras() {
             document.getElementById('compras-modal').style.display = 'none';

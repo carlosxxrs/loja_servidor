@@ -374,8 +374,6 @@
             text-transform: uppercase;
         }
         .status-approved { background: rgba(46, 160, 67, 0.2); color: #2ea043; border: 1px solid #2ea043; }
-        .status-pending { background: rgba(255, 170, 0, 0.2); color: #ffaa00; border: 1px solid #ffaa00; }
-        .status-cancelled { background: rgba(255, 77, 77, 0.2); color: #ff4d4d; border: 1px solid #ff4d4d; }
     </style>
 </head>
 <body>
@@ -431,10 +429,10 @@
         </div>
     </div>
 
-    <!-- MODAL DO PIX COM QR CODE EM ALTA RESOLUÇÃO -->
+    <!-- MODAL DO PIX COM QR CODE ENVIADO PELO SERVIDOR -->
     <div id="pix-modal" class="modal-pix-overlay">
         <div class="modal-pix-card" id="modal-pix-card-content">
-            <!-- Conteúdo inicial dinâmico -->
+            <!-- Conteúdo dinâmico -->
         </div>
     </div>
 
@@ -446,7 +444,7 @@
             <p style="font-size: 12px; color: #8a8a9e; margin-bottom: 10px;">Acompanhe o status das suas transações</p>
             
             <div id="compras-lista-container" class="compras-lista">
-                <!-- Pedidos inseridos dinamicamente -->
+                <!-- Lista de pedidos aprovados dinâmicos -->
             </div>
         </div>
     </div>
@@ -597,11 +595,12 @@
             btnCheckout.disabled = true;
 
             const usuario = document.getElementById('nick-usuario').innerText;
+            const itensParaEnviar = [...carrinho];
 
             fetch('/api/checkout/pix', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ itens: carrinho, usuario: usuario })
+                body: JSON.stringify({ itens: itensParaEnviar, usuario: usuario })
             })
             .then(res => res.json())
             .then(data => {
@@ -647,9 +646,16 @@
                     if (intervaloStatusPix) clearInterval(intervaloStatusPix);
 
                     const paymentId = data.paymentId;
+
+                    // CHECAGEM DE STATUS ENVIANDO CORRETAMENTE O CORPO DA COMPRA
                     intervaloStatusPix = setInterval(async () => {
                         try {
-                            const res = await fetch(`/api/checkout/status/${paymentId}`);
+                            const res = await fetch(`/api/checkout/status/${paymentId}`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ itens: itensParaEnviar, usuario: usuario })
+                            });
+
                             const result = await res.json();
 
                             if (result.success && result.status === 'approved') {
@@ -717,10 +723,8 @@
             }
         }
 
-        /* --- LÓGICA DE MINHAS COMPRAS (COM SUPORTE A IMAGENS) --- */
+        /* --- LÓGICA DE MINHAS COMPRAS --- */
         async function abrirMinhasCompras() {
-            localStorage.removeItem('minhas_compras');
-
             const container = document.getElementById('compras-lista-container'); 
             const modal = document.getElementById('compras-modal');
             
@@ -753,7 +757,7 @@
                         itensHtml = `<li style="font-size: 13px; color: #b3b3c6; margin-top: 6px;">${compra.itens}</li>`;
                     }
 
-                    const numPedido = compra.id || compra.payment_id || compra.pedido_id || '---';
+                    const numPedido = compra.id || compra.payment_id || '---';
 
                     container.innerHTML += `
                         <div class="compra-card-item">

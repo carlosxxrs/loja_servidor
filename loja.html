@@ -470,40 +470,48 @@
 
                     if (data.produtos.length === 0) {
                         container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #8a8a9e;">Nenhum produto disponível no momento.</p>';
-                        return;
+                    } else {
+                        data.produtos.forEach(prod => {
+                            const card = document.createElement('div');
+                            card.classList.add('card-produto');
+                            card.style.borderColor = prod.cor;
+
+                            let specsHtml = '';
+                            if (prod.especificacoes && prod.especificacoes.length > 0) {
+                                specsHtml = prod.especificacoes.map(spec => `<li>${spec}</li>`).join('');
+                            }
+
+                            let botaoExcluir = '';
+                            if (data.isAdmin) {
+                                botaoExcluir = `<button class="btn-excluir" onclick="deletarProduto(${prod.id})">🗑️ Excluir Produto</button>`;
+                            }
+
+                            card.innerHTML = `
+                                <div class="badge-destaque" style="color: ${prod.cor}; border: 1px solid ${prod.cor};">${prod.destaque || 'NOVO'}</div>
+                                <div class="img-container">
+                                    <img src="${prod.imagem}" alt="${prod.nome}">
+                                </div>
+                                <div class="card-body">
+                                    <div class="card-title">${prod.nome}</div>
+                                    <div class="card-price">R$ ${prod.preco}</div>
+                                    <ul class="specs-list">${specsHtml}</ul>
+                                    <button class="btn-comprar" style="background-color: ${prod.cor};" onclick="adicionarAoCarrinho(${prod.id})">Adicionar ao Carrinho</button>
+                                    ${botaoExcluir}
+                                </div>
+                            `;
+                            container.appendChild(card);
+                        });
                     }
 
-                    data.produtos.forEach(prod => {
-                        const card = document.createElement('div');
-                        card.classList.add('card-produto');
-                        card.style.borderColor = prod.cor;
-
-                        let specsHtml = '';
-                        if (prod.especificacoes && prod.especificacoes.length > 0) {
-                            specsHtml = prod.especificacoes.map(spec => `<li>${spec}</li>`).join('');
-                        }
-
-                        let botaoExcluir = '';
-                        if (data.isAdmin) {
-                            botaoExcluir = `<button class="btn-excluir" onclick="deletarProduto(${prod.id})">🗑️ Excluir Produto</button>`;
-                        }
-
-                        card.innerHTML = `
-                            <div class="badge-destaque" style="color: ${prod.cor}; border: 1px solid ${prod.cor};">${prod.destaque || 'NOVO'}</div>
-                            <div class="img-container">
-                                <img src="${prod.imagem}" alt="${prod.nome}">
-                            </div>
-                            <div class="card-body">
-                                <div class="card-title">${prod.nome}</div>
-                                <div class="card-price">R$ ${prod.preco}</div>
-                                <ul class="specs-list">${specsHtml}</ul>
-                                <button class="btn-comprar" style="background-color: ${prod.cor};" onclick="adicionarAoCarrinho(${prod.id})">Adicionar ao Carrinho</button>
-                                ${botaoExcluir}
-                            </div>
-                        `;
-                        container.appendChild(card);
-                    });
+                    // Remove do carrinho itens que foram deletados pelo Admin
+                    sincronizarCarrinho(data.produtos);
                 });
+        }
+
+        function sincronizarCarrinho(produtosExistentes) {
+            const idsValidos = produtosExistentes.map(p => p.id);
+            carrinho = carrinho.filter(item => idsValidos.includes(item.produto.id));
+            atualizarCarrinho();
         }
 
         function toggleCarrinho() {
@@ -607,90 +615,90 @@
                 btnCheckout.innerHTML = "<span>❖</span> Pagar com PIX";
                 btnCheckout.disabled = false;
 
-                if (data.success) {
-                    const pixCode = data.pixCopiaECola;
-                    let finalQrImg = data.qrCodeImg;
-                    
-                    if (finalQrImg && !finalQrImg.startsWith('http') && !finalQrImg.startsWith('data:image')) {
-                        finalQrImg = `data:image/png;base64,${finalQrImg}`;
-                    }
-
-                    if (!finalQrImg || finalQrImg.length < 20) {
-                        finalQrImg = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(pixCode)}`;
-                    }
-
-                    document.getElementById('modal-pix-card-content').innerHTML = `
-                        <button onclick="fecharModalPix()" style="position: absolute; top: 15px; right: 15px; background: none; border: none; color: #8a8a9e; font-size: 20px; cursor: pointer;">✕</button>
-                        
-                        <h3 style="color: #32bcad; margin-bottom: 5px; font-size: 18px;">❖ Pagamento via PIX</h3>
-                        <p style="font-size: 12px; color: #b3b3c6; margin-bottom: 15px;">Aponte a câmera do aplicativo do seu banco:</p>
-
-                        <div class="qr-box">
-                            <img id="pix-qr-img" src="${finalQrImg}" alt="QR Code PIX">
-                        </div>
-
-                        <div style="margin-bottom: 15px;">
-                            <p style="font-size: 12px; color: #8a8a9e;">Total a pagar: <strong id="pix-modal-total" style="color: #2ea043; font-size: 16px;">R$ ${data.valor}</strong></p>
-                        </div>
-
-                        <input type="text" id="pix-copia-cola" value="${pixCode}" readonly style="width: 100%; padding: 10px; background: #0b0b10; border: 1px solid #2a2a3c; color: #8a8a9e; border-radius: 6px; font-size: 11px; margin-bottom: 10px; text-align: center;">
-
-                        <button onclick="copiarChavePix()" style="width: 100%; padding: 12px; background: #8c52ff; border: none; border-radius: 6px; color: #fff; font-weight: 700; cursor: pointer; text-transform: uppercase;">
-                            📋 Copiar Chave PIX (Copia e Cola)
-                        </button>
-                    `;
-                    
-                    document.getElementById('pix-modal').style.display = 'flex';
-                    toggleCarrinho();
-
-                    if (intervaloStatusPix) clearInterval(intervaloStatusPix);
-
-                    const paymentId = data.paymentId;
-
-                    // CHECAGEM DE STATUS ENVIANDO CORRETAMENTE O CORPO DA COMPRA
-                    intervaloStatusPix = setInterval(async () => {
-                        try {
-                            const res = await fetch(`/api/checkout/status/${paymentId}`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ itens: itensParaEnviar, usuario: usuario })
-                            });
-
-                            const result = await res.json();
-
-                            if (result.success && result.status === 'approved') {
-                                clearInterval(intervaloStatusPix);
-                                
-                                document.getElementById('modal-pix-card-content').innerHTML = `
-                                    <div style="padding: 20px 10px; text-align: center;">
-                                        <div style="width: 70px; height: 70px; background: #2ea043; color: #fff; font-size: 40px; font-weight: bold; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; box-shadow: 0 0 20px rgba(46, 160, 67, 0.5);">
-                                            ✓
-                                        </div>
-                                        <h2 style="color: #2ea043; margin-bottom: 10px; font-size: 22px;">Pagamento Aprovado!</h2>
-                                        <p style="color: #b3b3c6; font-size: 14px; margin-bottom: 25px;">Obrigado pela compra. Seus itens/VIP já foram liberados em sua conta!</p>
-                                        <button onclick="fecharEConcluir()" style="width: 100%; padding: 12px; background: #8c52ff; border: none; border-radius: 6px; color: #fff; font-weight: 700; cursor: pointer; text-transform: uppercase;">
-                                            Concluir
-                                        </button>
-                                    </div>
-                                `;
-
-                                carrinho = [];
-                                atualizarCarrinho();
-                            }
-                        } catch (err) {
-                            console.error("Erro ao consultar status:", err);
-                        }
-                    }, 3000);
-
-                } else {
-                    alert("Erro ao gerar PIX: " + (data.error || "Verifique as configurações do Mercado Pago."));
+                if (!data.success) {
+                    alert(data.error || "Ocorreu um erro ao gerar o PIX.");
+                    carregarProdutos();
+                    return;
                 }
+
+                const pixCode = data.pixCopiaECola;
+                let finalQrImg = data.qrCodeImg;
+                
+                if (finalQrImg && !finalQrImg.startsWith('http') && !finalQrImg.startsWith('data:image')) {
+                    finalQrImg = `data:image/png;base64,${finalQrImg}`;
+                }
+
+                if (!finalQrImg || finalQrImg.length < 20) {
+                    finalQrImg = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(pixCode)}`;
+                }
+
+                document.getElementById('modal-pix-card-content').innerHTML = `
+                    <button onclick="fecharModalPix()" style="position: absolute; top: 15px; right: 15px; background: none; border: none; color: #8a8a9e; font-size: 20px; cursor: pointer;">✕</button>
+                    
+                    <h3 style="color: #32bcad; margin-bottom: 5px; font-size: 18px;">❖ Pagamento via PIX</h3>
+                    <p style="font-size: 12px; color: #b3b3c6; margin-bottom: 15px;">Aponte a câmera do aplicativo do seu banco:</p>
+
+                    <div class="qr-box">
+                        <img id="pix-qr-img" src="${finalQrImg}" alt="QR Code PIX">
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <p style="font-size: 12px; color: #8a8a9e;">Total a pagar: <strong id="pix-modal-total" style="color: #2ea043; font-size: 16px;">R$ ${data.valor}</strong></p>
+                    </div>
+
+                    <input type="text" id="pix-copia-cola" value="${pixCode}" readonly style="width: 100%; padding: 10px; background: #0b0b10; border: 1px solid #2a2a3c; color: #8a8a9e; border-radius: 6px; font-size: 11px; margin-bottom: 10px; text-align: center;">
+
+                    <button onclick="copiarChavePix()" style="width: 100%; padding: 12px; background: #8c52ff; border: none; border-radius: 6px; color: #fff; font-weight: 700; cursor: pointer; text-transform: uppercase;">
+                        📋 Copiar Chave PIX (Copia e Cola)
+                    </button>
+                `;
+                
+                document.getElementById('pix-modal').style.display = 'flex';
+                toggleCarrinho();
+
+                if (intervaloStatusPix) clearInterval(intervaloStatusPix);
+
+                const paymentId = data.paymentId;
+
+                intervaloStatusPix = setInterval(async () => {
+                    try {
+                        const res = await fetch(`/api/checkout/status/${paymentId}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ itens: itensParaEnviar, usuario: usuario })
+                        });
+
+                        const result = await res.json();
+
+                        if (result.success && result.status === 'approved') {
+                            clearInterval(intervaloStatusPix);
+                            
+                            document.getElementById('modal-pix-card-content').innerHTML = `
+                                <div style="padding: 20px 10px; text-align: center;">
+                                    <div style="width: 70px; height: 70px; background: #2ea043; color: #fff; font-size: 40px; font-weight: bold; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; box-shadow: 0 0 20px rgba(46, 160, 67, 0.5);">
+                                        ✓
+                                    </div>
+                                    <h2 style="color: #2ea043; margin-bottom: 10px; font-size: 22px;">Pagamento Aprovado!</h2>
+                                    <p style="color: #b3b3c6; font-size: 14px; margin-bottom: 25px;">Obrigado pela compra. Seus itens/VIP já foram liberados em sua conta!</p>
+                                    <button onclick="fecharEConcluir()" style="width: 100%; padding: 12px; background: #8c52ff; border: none; border-radius: 6px; color: #fff; font-weight: 700; cursor: pointer; text-transform: uppercase;">
+                                        Concluir
+                                    </button>
+                                </div>
+                            `;
+
+                            carrinho = [];
+                            atualizarCarrinho();
+                        }
+                    } catch (err) {
+                        console.error("Erro ao consultar status:", err);
+                    }
+                }, 3000);
             })
             .catch(err => {
                 btnCheckout.innerHTML = "<span>❖</span> Pagar com PIX";
                 btnCheckout.disabled = false;
                 console.error(err);
-                alert("Falha na comunicação com o servidor.");
+                alert("Falha de comunicação com o servidor ao tentar processar o pagamento.");
             });
         }
 
@@ -718,7 +726,9 @@
                 fetch(`/admin/deletar-produto/${id}`, { method: 'POST' })
                     .then(res => res.json())
                     .then(data => {
-                        if (data.success) carregarProdutos();
+                        if (data.success) {
+                            carregarProdutos();
+                        }
                     });
             }
         }
